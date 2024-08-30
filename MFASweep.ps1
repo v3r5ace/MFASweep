@@ -66,6 +66,8 @@ Function Invoke-MFASweep{
     
     )
 
+    $global:ProgressPreference = 'SilentlyContinue'
+
     Write-Custom -Message "---------------- MFASweep ----------------"
 	Write-Custom -Message $Recon
     $Tab = [char]9
