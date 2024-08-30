@@ -58,11 +58,16 @@ Function Invoke-MFASweep{
 
     [Parameter(Position = 2, Mandatory = $False)]
     [Switch]
+    $resultsonly,
+	
+    [Parameter(Position = 2, Mandatory = $False)]
+    [Switch]
     $IncludeADFS
     
     )
 
-    Write-Host "---------------- MFASweep ----------------"
+    Write-Custom -Message "---------------- MFASweep ----------------"
+	Write-Custom -Message $Recon
     $Tab = [char]9
     if ($Recon -eq $false){
 
@@ -81,7 +86,7 @@ Function Invoke-MFASweep{
 
         if ($reconresult -ne 0)
         {
-            Write-Host -ForegroundColor Yellow "[*] Not performing recon."
+            Write-Custom -Message "[*] Not performing recon."
         
         }
         if ($reconresult -eq 0){
@@ -91,9 +96,9 @@ Function Invoke-MFASweep{
 
     if ($Recon){
 
-        Write-Host "---------------- Running recon checks ----------------"
+        Write-Custom -Message "---------------- Running recon checks ----------------"
     
-        Write-Host "[*] Checking if ADFS configured..."
+        Write-Custom -Message "[*] Checking if ADFS configured..."
 
         $ADFSCheck = Invoke-WebRequest -Uri "https://login.microsoftonline.com/getuserrealm.srf?login=$UserName&xml=1"
         [xml]$ADFSXML = $ADFSCheck.Content
@@ -101,8 +106,8 @@ Function Invoke-MFASweep{
         $ADFSDomain = $RootADFSURL.Host
         If($adfsxml.RealmInfo.NameSpaceType -like "Federated"){
     
-        Write-Host -ForegroundColor Cyan "[*] ADFS appears to be in use."
-        Write-Host -ForegroundColor Cyan ("[*] The ADFS authentication URL is here: " + $adfsxml.RealmInfo.AuthURL)
+        Write-Custom -Message  "[*] ADFS appears to be in use."
+        Write-Custom -Message  ("[*] The ADFS authentication URL is here: " + $adfsxml.RealmInfo.AuthURL)
 
             $adfstitle = "ADFS Authentication"
             $adfsmessage = "Do you want to include ADFS in the authentication checks? This is generally an on-premise system. If you select yes an authentication attempt will be made to the system at $ADFSDomain."
@@ -119,7 +124,7 @@ Function Invoke-MFASweep{
 
             if ($global:adfsresult -ne 0)
             {
-                Write-Host -ForegroundColor Yellow "[*] ADFS authentication is not being performed."
+                Write-Custom -Message  "[*] ADFS authentication is not being performed."
         
             }
             if ($global:adfsresult -eq 0){
@@ -130,16 +135,16 @@ Function Invoke-MFASweep{
         }
         ElseIf($adfsxml.RealmInfo.NameSpaceType -like "Managed"){
     
-        Write-Host -ForegroundColor Cyan "[*] ADFS does not appear to be in use. Authentication appears to be managed by Microsoft."
+        Write-Custom -Message  "[*] ADFS does not appear to be in use. Authentication appears to be managed by Microsoft."
         }
         ElseIf($adfsxml.RealmInfo.NameSpaceType -like "Unknown"){
     
-        Write-Host -ForegroundColor Red "[*] The domain associated with the email address you submitted does appear to have a presence in Microsoft Online / O365. Authentication will likely fail."
+        Write-Custom -Message  "[*] The domain associated with the email address you submitted does appear to have a presence in Microsoft Online / O365. Authentication will likely fail."
         }
 
     }
 
-
+	if ($resultsonly -eq $false){
     $title = "Confirm MFA Sweep"
     $message = "[*] WARNING: This script is about to attempt logging into the $username account TEN (10) different times (11 if you included ADFS). If you entered an incorrect password this may lock the account out. Are you sure you want to continue?"
 
@@ -152,10 +157,16 @@ Function Invoke-MFASweep{
     $options = [System.Management.Automation.Host.ChoiceDescription[]]($yes, $no)
 
     $result = $host.ui.PromptForChoice($title, $message, $options, 0)
-
+	}
+	else{
+	$options = "Yes"
+	$result = "0"
+	}
+	
+	Write-Custom -Message $result
     if ($result -ne 0)
     {
-        Write-Host -ForegroundColor Yellow "[*] Stopping the execution of the script."
+        Write-Custom -Message  "[*] Stopping the execution of the script."
         break
     }
 
@@ -172,60 +183,60 @@ Function Invoke-MFASweep{
     $global:adfsresult = "NO"
 
 
-    Write-Output "########################### Microsoft API Checks ###########################"
+    Custom-Output -message "########################### Microsoft API Checks ###########################"
     Invoke-GraphAPIAuth -Username $Username -Password $Password
     Invoke-AzureManagementAPIAuth -Username $Username -Password $Password
-    Write-Output "############################################################################################################"
-    Write-Host `r`n
-    Write-Output "########################### Microsoft Web Portal User Agent Checks ###########################"
+    Custom-Output -message "############################################################################################################"
+    Write-Custom -Message `r`n
+    Custom-Output -message "########################### Microsoft Web Portal User Agent Checks ###########################"
     Invoke-O365WebPortalAuthWindows -Username $Username -Password $Password
     Invoke-O365WebPortalAuthLinux -Username $Username -Password $Password
     Invoke-O365WebPortalAuthMacOS -Username $Username -Password $Password
     Invoke-O365WebPortalAuthMobileAndroid -Username $Username -Password $Password
     Invoke-O365WebPortalAuthMobileiPhone -Username $Username -Password $Password
     Invoke-O365WebPortalAuthMobileWindowsPhone -Username $Username -Password $Password
-    Write-Output "############################################################################################################"
-    Write-Host `r`n
-    Write-Output "########################### Legacy Auth Checks ###########################"
+    Custom-Output -message "############################################################################################################"
+    Write-Custom -Message `r`n
+    Custom-Output -message "########################### Legacy Auth Checks ###########################"
     Invoke-EWSAuth -Username $Username -Password $Password
     Invoke-O365ActiveSyncAuth -Username $Username -Password $Password
-    Write-Output "############################################################################################################"
-    Write-Host `r`n
+    Custom-Output -message "############################################################################################################"
+    Write-Custom -Message `r`n
     
 
     If($IncludeADFS){
-        Write-Output "############################################################################################################"
-        Write-Host `r`n
-        Write-Output "########################### ADFS Check ###########################"
+        Custom-Output -message "############################################################################################################"
+        Write-Custom -Message `r`n
+        Custom-Output -message "########################### ADFS Check ###########################"
         Invoke-ADFSAuth -Username $Username -Password $Password
 
     }
 
-    Write-Host -ForegroundColor Yellow "######### SINGLE FACTOR ACCESS RESULTS #########"
-    if($global:graphresult -contains "YES"){Write-Host -NoNewLine "Microsoft Graph API $Tab$Tab$Tab|"; Write-Host -ForegroundColor Green " $global:graphresult"}
-    else{Write-Host "Microsoft Graph API $Tab$Tab$Tab| $global:graphresult"}
-    if($global:smresult -contains "YES"){Write-Host -NoNewLine "Microsoft Service Management API $Tab|"; Write-Host -ForegroundColor Green " $global:smresult"}
-    else{Write-Host "Microsoft Service Management API $Tab| $global:smresult"}
-    if($global:o365wresult -contains "YES"){Write-Host -NoNewLine "O365 w/ Windows UA $Tab$Tab$Tab|"; Write-Host -ForegroundColor Green " $global:o365wresult"}
-    else{Write-Host "O365 w/ Windows UA $Tab$Tab$Tab| $global:o365wresult"}
-    if($global:o365lresult -contains "YES"){Write-Host -NoNewLine "O365 w/ Linux UA $Tab$Tab$Tab|"; Write-Host -ForegroundColor Green " $global:o365lresult"}
-    else{Write-Host "O365 w/ Linux UA $Tab$Tab$Tab| $global:o365lresult"}
-    if($global:o365mresult -contains "YES"){Write-Host -NoNewLine "O365 w/ MacOS UA $Tab$Tab$Tab|"; Write-Host -ForegroundColor Green " $global:o365mresult"}
-    else{Write-Host "O365 w/ MacOS UA $Tab$Tab$Tab| $global:o365mresult"}
-    if($global:o365apresult -contains "YES"){Write-Host -NoNewLine "O365 w/ Android UA $Tab$Tab$Tab|"; Write-Host -ForegroundColor Green " $global:o365apresult"}
-    else{Write-Host "O365 w/ Android UA $Tab$Tab$Tab| $global:o365apresult"}
-    if($global:o365ipresult -contains "YES"){Write-Host -NoNewLine "O365 w/ iPhone UA $Tab$Tab$Tab|"; Write-Host -ForegroundColor Green " $global:o365ipresult"}
-    else{Write-Host "O365 w/ iPhone UA $Tab$Tab$Tab| $global:o365ipresult"}
-    if($global:o365wpresult -contains "YES"){Write-Host -NoNewLine "O365 w/ Windows Phone UA $Tab$Tab$Tab|"; Write-Host -ForegroundColor Green " $global:o365wpresult"}
-    else{Write-Host "O365 w/ Windows Phone UA $Tab$Tab| $global:o365wpresult"}
-    if($global:ewsresult -contains "YES"){Write-Host -NoNewLine "Exchange Web Services $Tab$Tab$Tab|"; Write-Host -ForegroundColor Green " $global:ewsresult"}
-    else{Write-Host "Exchange Web Services $Tab$Tab$Tab| $global:ewsresult"}
-    if($global:asyncresult -contains "YES"){Write-Host -NoNewLine "Active Sync $Tab$Tab$Tab|"; Write-Host -ForegroundColor Green " $global:asyncresult"}
-    else{Write-Host "Active Sync $Tab$Tab$Tab$Tab| $global:asyncresult"}
+    Write-Custom -Message  "######### SINGLE FACTOR ACCESS RESULTS #########"
+    if($global:graphresult -contains "YES"){Write-Custom -Message -NoNewLine "Microsoft Graph API $Tab$Tab$Tab|"; Write-Custom -Message  " $global:graphresult"}
+    else{Write-Custom -Message "Microsoft Graph API $Tab$Tab$Tab| $global:graphresult"}
+    if($global:smresult -contains "YES"){Write-Custom -Message -NoNewLine "Microsoft Service Management API $Tab|"; Write-Custom -Message  " $global:smresult"}
+    else{Write-Custom -Message "Microsoft Service Management API $Tab| $global:smresult"}
+    if($global:o365wresult -contains "YES"){Write-Custom -Message -NoNewLine "O365 w/ Windows UA $Tab$Tab$Tab|"; Write-Custom -Message  " $global:o365wresult"}
+    else{Write-Custom -Message "O365 w/ Windows UA $Tab$Tab$Tab| $global:o365wresult"}
+    if($global:o365lresult -contains "YES"){Write-Custom -Message -NoNewLine "O365 w/ Linux UA $Tab$Tab$Tab|"; Write-Custom -Message  " $global:o365lresult"}
+    else{Write-Custom -Message "O365 w/ Linux UA $Tab$Tab$Tab| $global:o365lresult"}
+    if($global:o365mresult -contains "YES"){Write-Custom -Message -NoNewLine "O365 w/ MacOS UA $Tab$Tab$Tab|"; Write-Custom -Message  " $global:o365mresult"}
+    else{Write-Custom -Message "O365 w/ MacOS UA $Tab$Tab$Tab| $global:o365mresult"}
+    if($global:o365apresult -contains "YES"){Write-Custom -Message -NoNewLine "O365 w/ Android UA $Tab$Tab$Tab|"; Write-Custom -Message  " $global:o365apresult"}
+    else{Write-Custom -Message "O365 w/ Android UA $Tab$Tab$Tab| $global:o365apresult"}
+    if($global:o365ipresult -contains "YES"){Write-Custom -Message -NoNewLine "O365 w/ iPhone UA $Tab$Tab$Tab|"; Write-Custom -Message  " $global:o365ipresult"}
+    else{Write-Custom -Message "O365 w/ iPhone UA $Tab$Tab$Tab| $global:o365ipresult"}
+    if($global:o365wpresult -contains "YES"){Write-Custom -Message -NoNewLine "O365 w/ Windows Phone UA $Tab$Tab$Tab|"; Write-Custom -Message  " $global:o365wpresult"}
+    else{Write-Custom -Message "O365 w/ Windows Phone UA $Tab$Tab| $global:o365wpresult"}
+    if($global:ewsresult -contains "YES"){Write-Custom -Message -NoNewLine "Exchange Web Services $Tab$Tab$Tab|"; Write-Custom -Message  " $global:ewsresult"}
+    else{Write-Custom -Message "Exchange Web Services $Tab$Tab$Tab| $global:ewsresult"}
+    if($global:asyncresult -contains "YES"){Write-Custom -Message -NoNewLine "Active Sync $Tab$Tab$Tab|"; Write-Custom -Message  " $global:asyncresult"}
+    else{Write-Custom -Message "Active Sync $Tab$Tab$Tab$Tab| $global:asyncresult"}
     
     If($IncludeADFS){
-    if($glotbal:adfsresult -contains "YES"){Write-Host -NoNewLine "ADFS $Tab$Tab$Tab|"; Write-Host -ForegroundColor Green " $global:adfsresult"}
-    else{Write-Host "ADFS $Tab$Tab| $global:adfsresult"}
+    if($glotbal:adfsresult -contains "YES"){Write-Custom -Message -NoNewLine "ADFS $Tab$Tab$Tab|"; Write-Custom -Message  " $global:adfsresult"}
+    else{Write-Custom -Message "ADFS $Tab$Tab| $global:adfsresult"}
     }
 }
 
@@ -243,10 +254,10 @@ Function Invoke-EWSAuth{
     $Password = ""
     )
     
-    Write-Host `r`n
-    Write-Host "---------------- Microsoft 365 Exchange Web Services ----------------"
+    Write-Custom -Message `r`n
+    Write-Custom -Message "---------------- Microsoft 365 Exchange Web Services ----------------"
 
-    Write-Host -ForegroundColor Yellow "[*] Authenticating to Microsoft 365 Exchange Web Services (EWS)..."
+    Write-Custom -Message  "[*] Authenticating to Microsoft 365 Exchange Web Services (EWS)..."
 
     $ErrorActionPreference = 'silentlycontinue' 
     
@@ -317,13 +328,13 @@ zL13fBXF+j9+snvSQ0hCOCcECEXKGpIAAZEOoqBGCL33qoSycZcmhxMQO9KVqqKCoBRBUQFRARERbNeK
     try
     {  
     $FolderRootConnect = [Microsoft.Exchange.WebServices.Data.Folder]::Bind($service,'MsgFolderRoot')
-    Write-Host -ForegroundColor green "[*] SUCCESS! $username was able to authenticate to Microsoft 365 EWS! "
-    Write-Host -ForegroundColor DarkGreen "[***] NOTE: MailSniper should work here." 
+    Write-Custom -Message  "[*] SUCCESS! $username was able to authenticate to Microsoft 365 EWS! "
+    Write-Custom -Message  "[***] NOTE: MailSniper should work here." 
     $global:ewsresult = "YES"
     }
     catch
     {
-    Write-Host -ForegroundColor Red "[*] Login failed to O365 EWS."
+    Write-Custom -Message  "[*] Login failed to O365 EWS."
     }
 
 }
@@ -342,11 +353,11 @@ Function Invoke-O365WebPortalAuthWindows{
     
     )
     
-    Write-Host `r`n
-    Write-Host "---------------- Microsoft 365 Web Portal w/ Windows User Agent ----------------"
+    Write-Custom -Message `r`n
+    Write-Custom -Message "---------------- Microsoft 365 Web Portal w/ Windows User Agent ----------------"
   
 
-    Write-Host -ForegroundColor Yellow "[*] Authenticating to Microsoft 365 Web Portal..."
+    Write-Custom -Message  "[*] Authenticating to Microsoft 365 Web Portal..."
 
     $SessionRequest = Invoke-WebRequest -Uri 'https://outlook.office365.com' -SessionVariable o365 -UserAgent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 Edg/107.0.1418.56"
 
@@ -415,20 +426,20 @@ Function Invoke-O365WebPortalAuthWindows{
 
     if ($o365.Cookies.GetCookies("https://login.microsoftonline.com").Name -like "ESTSAUTH")
     {
-    Write-Host -ForegroundColor Green "[*] SUCCESS! $username was able to authenticate to the Microsoft 365 Web Portal. Checking MFA now..."
+    Write-Custom -Message  "[*] SUCCESS! $username was able to authenticate to the Microsoft 365 Web Portal. Checking MFA now..."
         if ($AuthRequest.Content -match "Stay signed in"){
-        Write-Host -ForegroundColor Cyan "[**] It appears there is no MFA for this account." 
-        Write-Host -ForegroundColor DarkGreen "[***] NOTE: Login with a Windows-based web browser to https://outlook.office365.com. Ex: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 Edg/107.0.1418.56" 
+        Write-Custom -Message  "[**] It appears there is no MFA for this account." 
+        Write-Custom -Message  "[***] NOTE: Login with a Windows-based web browser to https://outlook.office365.com. Ex: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 Edg/107.0.1418.56" 
         $global:o365wresult = "YES"
         Foreach ($cookie in $o365.Cookies.GetCookies("https://login.microsoftonline.com")){write-verbose ($cookie.name + " = " + $cookie.value)}
         }
         elseif ($AuthRequest.Content -match "Verify your identity"){
-        Write-Host -ForegroundColor Red "[**] It appears MFA is setup for this account to access Microsoft 365 via the web portal." 
+        Write-Custom -Message  "[**] It appears MFA is setup for this account to access Microsoft 365 via the web portal." 
         Foreach ($cookie in $o365.Cookies.GetCookies("https://login.microsoftonline.com")){write-verbose ($cookie.name + " = " + $cookie.value)}
         }
     }
     else{
-    Write-Host -ForegroundColor red "[*] Login appears to have failed."
+    Write-Custom -Message  "[*] Login appears to have failed."
     }
 }
 
@@ -447,11 +458,11 @@ Function Invoke-O365WebPortalAuthMobileAndroid{
     
     )
     
-    Write-Host `r`n
-    Write-Host "---------------- Microsoft 365 Web Portal w/ Mobile User Agent (Android) ----------------"
+    Write-Custom -Message `r`n
+    Write-Custom -Message "---------------- Microsoft 365 Web Portal w/ Mobile User Agent (Android) ----------------"
   
 
-    Write-Host -ForegroundColor Yellow "[*] Authenticating to Microsoft 365 Web Portal using a mobile user agent (Android)..."
+    Write-Custom -Message  "[*] Authenticating to Microsoft 365 Web Portal using a mobile user agent (Android)..."
 
     $SessionRequest = Invoke-WebRequest -Uri 'https://outlook.office365.com' -SessionVariable o365 -UserAgent "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Mobile Safari/537.36"
 
@@ -520,20 +531,20 @@ Function Invoke-O365WebPortalAuthMobileAndroid{
 
     if ($o365.Cookies.GetCookies("https://login.microsoftonline.com").Name -like "ESTSAUTH")
     {
-    Write-Host -ForegroundColor Green "[*] SUCCESS! $username was able to authenticate to the Microsoft 365 Web Portal. Checking MFA now..."
+    Write-Custom -Message  "[*] SUCCESS! $username was able to authenticate to the Microsoft 365 Web Portal. Checking MFA now..."
         if ($AuthRequest.Content -match "Stay signed in"){
-        Write-Host -ForegroundColor Cyan "[**] It appears there is no MFA for this account." 
-        Write-Host -ForegroundColor DarkGreen "[***] NOTE: Login with a web browser to https://outlook.office365.com using an Android user agent. Ex: Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Mobile Safari/537.36" 
+        Write-Custom -Message  "[**] It appears there is no MFA for this account." 
+        Write-Custom -Message  "[***] NOTE: Login with a web browser to https://outlook.office365.com using an Android user agent. Ex: Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Mobile Safari/537.36" 
         $global:o365apresult = "YES"
         Foreach ($cookie in $o365.Cookies.GetCookies("https://login.microsoftonline.com")){write-verbose ($cookie.name + " = " + $cookie.value)}
         }
         elseif ($AuthRequest.Content -match "Verify your identity"){
-        Write-Host -ForegroundColor Red "[**] It appears MFA is setup for this account to access Microsoft 365 via the web portal." 
+        Write-Custom -Message  "[**] It appears MFA is setup for this account to access Microsoft 365 via the web portal." 
         Foreach ($cookie in $o365.Cookies.GetCookies("https://login.microsoftonline.com")){write-verbose ($cookie.name + " = " + $cookie.value)}
         }
     }
     else{
-    Write-Host -ForegroundColor red "[*] Login appears to have failed."
+    Write-Custom -Message  "[*] Login appears to have failed."
     }
 }
 
@@ -551,11 +562,11 @@ Function Invoke-O365WebPortalAuthMobileiPhone{
     
     )
     
-    Write-Host `r`n
-    Write-Host "---------------- Microsoft 365 Web Portal w/ Mobile User Agent (iPhone) ----------------"
+    Write-Custom -Message `r`n
+    Write-Custom -Message "---------------- Microsoft 365 Web Portal w/ Mobile User Agent (iPhone) ----------------"
   
 
-    Write-Host -ForegroundColor Yellow "[*] Authenticating to Microsoft 365 Web Portal using a mobile user agent (iPhone)..."
+    Write-Custom -Message  "[*] Authenticating to Microsoft 365 Web Portal using a mobile user agent (iPhone)..."
 
     $SessionRequest = Invoke-WebRequest -Uri 'https://outlook.office365.com' -SessionVariable o365 -UserAgent "Mozilla/5.0 (iPhone; CPU iPhone OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.1 Mobile/15E148 Safari/604.1
 "
@@ -627,21 +638,21 @@ Function Invoke-O365WebPortalAuthMobileiPhone{
 
     if ($o365.Cookies.GetCookies("https://login.microsoftonline.com").Name -like "ESTSAUTH")
     {
-    Write-Host -ForegroundColor Green "[*] SUCCESS! $username was able to authenticate to the Microsoft 365 Web Portal. Checking MFA now..."
+    Write-Custom -Message  "[*] SUCCESS! $username was able to authenticate to the Microsoft 365 Web Portal. Checking MFA now..."
         if ($AuthRequest.Content -match "Stay signed in"){
-        Write-Host -ForegroundColor Cyan "[**] It appears there is no MFA for this account." 
-        Write-Host -ForegroundColor DarkGreen "[***] NOTE: Login with a web browser to https://outlook.office365.com using an iPhone user agent. Ex: Mozilla/5.0 (iPhone; CPU iPhone OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.1 Mobile/15E148 Safari/604.1
+        Write-Custom -Message  "[**] It appears there is no MFA for this account." 
+        Write-Custom -Message  "[***] NOTE: Login with a web browser to https://outlook.office365.com using an iPhone user agent. Ex: Mozilla/5.0 (iPhone; CPU iPhone OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.1 Mobile/15E148 Safari/604.1
 "
         $global:o365ipresult = "YES"
         Foreach ($cookie in $o365.Cookies.GetCookies("https://login.microsoftonline.com")){write-verbose ($cookie.name + " = " + $cookie.value)}
         }
         elseif ($AuthRequest.Content -match "Verify your identity"){
-        Write-Host -ForegroundColor Red "[**] It appears MFA is setup for this account to access Microsoft 365 via the web portal." 
+        Write-Custom -Message  "[**] It appears MFA is setup for this account to access Microsoft 365 via the web portal." 
         Foreach ($cookie in $o365.Cookies.GetCookies("https://login.microsoftonline.com")){write-verbose ($cookie.name + " = " + $cookie.value)}
         }
     }
     else{
-    Write-Host -ForegroundColor red "[*] Login appears to have failed."
+    Write-Custom -Message  "[*] Login appears to have failed."
     }
 }
 
@@ -659,11 +670,11 @@ Function Invoke-O365WebPortalAuthLinux{
     
     )
     
-    Write-Host `r`n
-    Write-Host "---------------- Microsoft 365 Web Portal w/ Linux User Agent ----------------"
+    Write-Custom -Message `r`n
+    Write-Custom -Message "---------------- Microsoft 365 Web Portal w/ Linux User Agent ----------------"
   
 
-    Write-Host -ForegroundColor Yellow "[*] Authenticating to Microsoft 365 Web Portal using a mobile user agent (iPhone)..."
+    Write-Custom -Message  "[*] Authenticating to Microsoft 365 Web Portal using a mobile user agent (iPhone)..."
 
     $SessionRequest = Invoke-WebRequest -Uri 'https://outlook.office365.com' -SessionVariable o365 -UserAgent "Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:24.0) Gecko/20100101 Firefox/24.0"
 
@@ -732,20 +743,20 @@ Function Invoke-O365WebPortalAuthLinux{
 
     if ($o365.Cookies.GetCookies("https://login.microsoftonline.com").Name -like "ESTSAUTH")
     {
-    Write-Host -ForegroundColor Green "[*] SUCCESS! $username was able to authenticate to the Microsoft 365 Web Portal. Checking MFA now..."
+    Write-Custom -Message  "[*] SUCCESS! $username was able to authenticate to the Microsoft 365 Web Portal. Checking MFA now..."
         if ($AuthRequest.Content -match "Stay signed in"){
-        Write-Host -ForegroundColor Cyan "[**] It appears there is no MFA for this account." 
-        Write-Host -ForegroundColor DarkGreen "[***] NOTE: Login with a web browser to https://outlook.office365.com using a Linux user agent. Ex: Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:24.0) Gecko/20100101 Firefox/24.0" 
+        Write-Custom -Message  "[**] It appears there is no MFA for this account." 
+        Write-Custom -Message  "[***] NOTE: Login with a web browser to https://outlook.office365.com using a Linux user agent. Ex: Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:24.0) Gecko/20100101 Firefox/24.0" 
         $global:o365lresult = "YES"
         Foreach ($cookie in $o365.Cookies.GetCookies("https://login.microsoftonline.com")){write-verbose ($cookie.name + " = " + $cookie.value)}
         }
         elseif ($AuthRequest.Content -match "Verify your identity"){
-        Write-Host -ForegroundColor Red "[**] It appears MFA is setup for this account to access Microsoft 365 via the web portal." 
+        Write-Custom -Message  "[**] It appears MFA is setup for this account to access Microsoft 365 via the web portal." 
         Foreach ($cookie in $o365.Cookies.GetCookies("https://login.microsoftonline.com")){write-verbose ($cookie.name + " = " + $cookie.value)}
         }
     }
     else{
-    Write-Host -ForegroundColor red "[*] Login appears to have failed."
+    Write-Custom -Message  "[*] Login appears to have failed."
     }
 }
 
@@ -763,11 +774,11 @@ Function Invoke-O365WebPortalAuthMobileWindowsPhone{
     
     )
     
-    Write-Host `r`n
-    Write-Host "---------------- Microsoft 365 Web Portal w/ Mobile User Agent (Windows Phone) ----------------"
+    Write-Custom -Message `r`n
+    Write-Custom -Message "---------------- Microsoft 365 Web Portal w/ Mobile User Agent (Windows Phone) ----------------"
   
 
-    Write-Host -ForegroundColor Yellow "[*] Authenticating to Microsoft 365 Web Portal using a mobile user agent (iPhone)..."
+    Write-Custom -Message  "[*] Authenticating to Microsoft 365 Web Portal using a mobile user agent (iPhone)..."
 
     $SessionRequest = Invoke-WebRequest -Uri 'https://outlook.office365.com' -SessionVariable o365 -UserAgent "Mozilla/5.0 (Mobile; Windows Phone 8.1; Android 4.0; ARM; Trident/7.0; Touch; rv:11.0; IEMobile/11.0; NOKIA; Lumia 635) like iPhone OS 7_0_3 Mac OS X AppleWebKit/537 (KHTML, like Gecko) Mobile Safari/537
 "
@@ -840,22 +851,22 @@ Function Invoke-O365WebPortalAuthMobileWindowsPhone{
 
     if ($o365.Cookies.GetCookies("https://login.microsoftonline.com").Name -like "ESTSAUTH")
     {
-    Write-Host -ForegroundColor Green "[*] SUCCESS! $username was able to authenticate to the Microsoft 365 Web Portal. Checking MFA now..."
+    Write-Custom -Message  "[*] SUCCESS! $username was able to authenticate to the Microsoft 365 Web Portal. Checking MFA now..."
         if ($AuthRequest.Content -match "Stay signed in"){
-        Write-Host -ForegroundColor Cyan "[**] It appears there is no MFA for this account." 
-        Write-Host -ForegroundColor DarkGreen "[***] NOTE: Login with a web browser to https://outlook.office365.com using an Windows Phone user agent. Ex: Mozilla/5.0 (Mobile; Windows Phone 8.1; Android 4.0; ARM; Trident/7.0; Touch; rv:11.0; IEMobile/11.0; NOKIA; Lumia 635) like iPhone OS 7_0_3 Mac OS X AppleWebKit/537 (KHTML, like Gecko) Mobile Safari/537
+        Write-Custom -Message  "[**] It appears there is no MFA for this account." 
+        Write-Custom -Message  "[***] NOTE: Login with a web browser to https://outlook.office365.com using an Windows Phone user agent. Ex: Mozilla/5.0 (Mobile; Windows Phone 8.1; Android 4.0; ARM; Trident/7.0; Touch; rv:11.0; IEMobile/11.0; NOKIA; Lumia 635) like iPhone OS 7_0_3 Mac OS X AppleWebKit/537 (KHTML, like Gecko) Mobile Safari/537
 
 "
         $global:o365wpresult = "YES"
         Foreach ($cookie in $o365.Cookies.GetCookies("https://login.microsoftonline.com")){write-verbose ($cookie.name + " = " + $cookie.value)}
         }
         elseif ($AuthRequest.Content -match "Verify your identity"){
-        Write-Host -ForegroundColor Red "[**] It appears MFA is setup for this account to access Microsoft 365 via the web portal." 
+        Write-Custom -Message  "[**] It appears MFA is setup for this account to access Microsoft 365 via the web portal." 
         Foreach ($cookie in $o365.Cookies.GetCookies("https://login.microsoftonline.com")){write-verbose ($cookie.name + " = " + $cookie.value)}
         }
     }
     else{
-    Write-Host -ForegroundColor red "[*] Login appears to have failed."
+    Write-Custom -Message  "[*] Login appears to have failed."
     }
 }
 
@@ -873,11 +884,11 @@ Function Invoke-O365WebPortalAuthMacOS{
     
     )
     
-    Write-Host `r`n
-    Write-Host "---------------- Microsoft 365 Web Portal w/ Mac OS User Agent ----------------"
+    Write-Custom -Message `r`n
+    Write-Custom -Message "---------------- Microsoft 365 Web Portal w/ Mac OS User Agent ----------------"
   
 
-    Write-Host -ForegroundColor Yellow "[*] Authenticating to Microsoft 365 Web Portal using a MacOS User Agent..."
+    Write-Custom -Message  "[*] Authenticating to Microsoft 365 Web Portal using a MacOS User Agent..."
 
     $SessionRequest = Invoke-WebRequest -Uri 'https://outlook.office365.com' -SessionVariable o365 -UserAgent "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/11.1.2 Safari/605.1.15"
 
@@ -948,20 +959,20 @@ Function Invoke-O365WebPortalAuthMacOS{
 
     if ($o365.Cookies.GetCookies("https://login.microsoftonline.com").Name -like "ESTSAUTH")
     {
-    Write-Host -ForegroundColor Green "[*] SUCCESS! $username was able to authenticate to the Microsoft 365 Web Portal. Checking MFA now..."
+    Write-Custom -Message  "[*] SUCCESS! $username was able to authenticate to the Microsoft 365 Web Portal. Checking MFA now..."
         if ($AuthRequest.Content -match "Stay signed in"){
-        Write-Host -ForegroundColor Cyan "[**] It appears there is no MFA for this account." 
-        Write-Host -ForegroundColor DarkGreen "[***] NOTE: Login with a web browser to https://outlook.office365.com using an MacOS user agent. Ex: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/11.1.2 Safari/605.1.15" 
+        Write-Custom -Message  "[**] It appears there is no MFA for this account." 
+        Write-Custom -Message  "[***] NOTE: Login with a web browser to https://outlook.office365.com using an MacOS user agent. Ex: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/11.1.2 Safari/605.1.15" 
         $global:o365mresult = "YES"
         Foreach ($cookie in $o365.Cookies.GetCookies("https://login.microsoftonline.com")){write-verbose ($cookie.name + " = " + $cookie.value)}
         }
         elseif ($AuthRequest.Content -match "Verify your identity"){
-        Write-Host -ForegroundColor Red "[**] It appears MFA is setup for this account to access Microsoft 365 via the web portal." 
+        Write-Custom -Message  "[**] It appears MFA is setup for this account to access Microsoft 365 via the web portal." 
         Foreach ($cookie in $o365.Cookies.GetCookies("https://login.microsoftonline.com")){write-verbose ($cookie.name + " = " + $cookie.value)}
         }
     }
     else{
-    Write-Host -ForegroundColor red "[*] Login appears to have failed."
+    Write-Custom -Message  "[*] Login appears to have failed."
     }
 }
 
@@ -980,14 +991,14 @@ Function Invoke-GraphAPIAuth{
     $Password = ""
     )
     
-    Write-Host `r`n
-    Write-Host "---------------- Microsoft Graph API ----------------"
+    Write-Custom -Message `r`n
+    Write-Custom -Message "---------------- Microsoft Graph API ----------------"
 
     $ErrorActionPreference = 'silentlycontinue'
 
     $URL = "https://login.microsoft.com"
 
-    Write-Host -ForegroundColor Yellow "[*] Authenticating to Microsoft Graph API..."
+    Write-Custom -Message  "[*] Authenticating to Microsoft Graph API..."
 
     # Setting up the web request
     $BodyParams = @{'resource' = 'https://graph.windows.net'; 'client_id' = '1b730954-1685-4b74-9bfd-dac224a7b894' ; 'client_info' = '1' ; 'grant_type' = 'password' ; 'username' = $username ; 'password' = $password ; 'scope' = 'openid'}
@@ -996,8 +1007,8 @@ Function Invoke-GraphAPIAuth{
 
     # If we get a 200 response code it's a valid cred
     If ($webrequest.StatusCode -eq "200"){
-    Write-Host -ForegroundColor "green" "[*] SUCCESS! $username was able to authenticate to the Microsoft Graph API"
-    Write-Host -ForegroundColor DarkGreen "[***] NOTE: The `"MSOnline`" PowerShell module should work here."
+    Write-Custom -Message  "[*] SUCCESS! $username was able to authenticate to the Microsoft Graph API"
+    Write-Custom -Message  "[***] NOTE: The `"MSOnline`" PowerShell module should work here."
     $global:graphresult = "YES" 
     Write-Verbose $webrequest.Content
         $webrequest = ""
@@ -1010,55 +1021,55 @@ Function Invoke-GraphAPIAuth{
             # Standard invalid password
         If($RespErr -match "AADSTS50126")
             {
-            Write-Host -ForegroundColor red "[*] Login appears to have failed."
+            Write-Custom -Message  "[*] Login appears to have failed."
             }
 
             # Invalid Tenant Response
         ElseIf (($RespErr -match "AADSTS50128") -or ($RespErr -match "AADSTS50059"))
             {
-            Write-Output "[*] WARNING! Tenant for account $username doesn't exist. Check the domain to make sure they are using Azure/O365 services."
+            Custom-Output -message "[*] WARNING! Tenant for account $username doesn't exist. Check the domain to make sure they are using Azure/O365 services."
             }
 
             # Invalid Username
         ElseIf($RespErr -match "AADSTS50034")
             {
-            Write-Output "[*] WARNING! The user $username doesn't exist."
+            Custom-Output -message "[*] WARNING! The user $username doesn't exist."
             }
 
             # Microsoft MFA response
         ElseIf(($RespErr -match "AADSTS50079") -or ($RespErr -match "AADSTS50076"))
             {
-            Write-Host -ForegroundColor "green" "[*] SUCCESS! $username was able to authenticate to the Microsoft Graph API - NOTE: The response indicates MFA (Microsoft) is in use."
+            Write-Custom -Message  "[*] SUCCESS! $username was able to authenticate to the Microsoft Graph API - NOTE: The response indicates MFA (Microsoft) is in use."
             }
     
             # Conditional Access response (Based off of limited testing this seems to be the repsonse to DUO MFA)
         ElseIf($RespErr -match "AADSTS50158")
             {
-            Write-Host -ForegroundColor "green" "[*] SUCCESS! $username was able to authenticate to the Microsoft Graph API - NOTE: The response indicates conditional access (MFA: DUO or other) is in use."
+            Write-Custom -Message  "[*] SUCCESS! $username was able to authenticate to the Microsoft Graph API - NOTE: The response indicates conditional access (MFA: DUO or other) is in use."
             }
 
             # Locked out account or Smart Lockout in place
         ElseIf($RespErr -match "AADSTS50053")
             {
-            Write-Output "[*] WARNING! The account $username appears to be locked."
+            Custom-Output -message "[*] WARNING! The account $username appears to be locked."
             }
 
             # Disabled account
         ElseIf($RespErr -match "AADSTS50057")
             {
-            Write-Output "[*] WARNING! The account $username appears to be disabled."
+            Custom-Output -message "[*] WARNING! The account $username appears to be disabled."
             }
             
             # User password is expired
         ElseIf($RespErr -match "AADSTS50055")
             {
-            Write-Host -ForegroundColor "green" "[*] SUCCESS! $username was able to authenticate to the Microsoft Graph API - NOTE: The user's password is expired."
+            Write-Custom -Message  "[*] SUCCESS! $username was able to authenticate to the Microsoft Graph API - NOTE: The user's password is expired."
             }
 
             # Unknown errors
         Else
             {
-            Write-Output "[*] Got an error we haven't seen yet for user $username"
+            Custom-Output -message "[*] Got an error we haven't seen yet for user $username"
             $RespErr
             }
     }
@@ -1079,14 +1090,14 @@ Function Invoke-AzureManagementAPIAuth{
     $Password = ""
     )
     
-    Write-Host `r`n
-    Write-Host "---------------- Azure Service Management API ----------------"
+    Write-Custom -Message `r`n
+    Write-Custom -Message "---------------- Azure Service Management API ----------------"
 
     $ErrorActionPreference = 'silentlycontinue'
 
     $URL = "https://login.microsoftonline.com"
 
-    Write-Host -ForegroundColor Yellow "[*] Authenticating to Azure Service Management API..."
+    Write-Custom -Message  "[*] Authenticating to Azure Service Management API..."
 
     # Setting up the web request
     $BodyParams = @{'resource' = 'https://management.core.windows.net'; 'client_id' = '1950a258-227b-4e31-a9cf-717495945fc2' ; 'grant_type' = 'password' ; 'username' = $username ; 'password' = $password ; 'scope' = 'openid'}
@@ -1095,8 +1106,8 @@ Function Invoke-AzureManagementAPIAuth{
 
     # If we get a 200 response code it's a valid cred
     If ($webrequest.StatusCode -eq "200"){
-    Write-Host -ForegroundColor "green" "[*] SUCCESS! $username was able to authenticate to the Azure Service Management API"
-    Write-Host -ForegroundColor DarkGreen "[***] NOTE: The `"Az`" PowerShell module should work here."
+    Write-Custom -Message  "[*] SUCCESS! $username was able to authenticate to the Azure Service Management API"
+    Write-Custom -Message  "[***] NOTE: The `"Az`" PowerShell module should work here."
     $global:smresult = "YES" 
     Write-Verbose $webrequest.Content
         $webrequest = ""
@@ -1109,55 +1120,55 @@ Function Invoke-AzureManagementAPIAuth{
             # Standard invalid password
         If($RespErr -match "AADSTS50126")
             {
-            Write-Host -ForegroundColor Red "[*] Login appears to have failed."
+            Write-Custom -Message  "[*] Login appears to have failed."
             }
 
             # Invalid Tenant Response
         ElseIf (($RespErr -match "AADSTS50128") -or ($RespErr -match "AADSTS50059"))
             {
-            Write-Output "[*] WARNING! Tenant for account $username doesn't exist. Check the domain to make sure they are using Azure/O365 services."
+            Custom-Output -message "[*] WARNING! Tenant for account $username doesn't exist. Check the domain to make sure they are using Azure/O365 services."
             }
 
             # Invalid Username
         ElseIf($RespErr -match "AADSTS50034")
             {
-            Write-Output "[*] WARNING! The user $username doesn't exist."
+            Custom-Output -message "[*] WARNING! The user $username doesn't exist."
             }
 
             # Microsoft MFA response
         ElseIf(($RespErr -match "AADSTS50079") -or ($RespErr -match "AADSTS50076"))
             {
-            Write-Host -ForegroundColor "green" "[*] SUCCESS! $username was able to authenticate to the Azure Service Management API - NOTE: The response indicates MFA (Microsoft) is in use."
+            Write-Custom -Message  "[*] SUCCESS! $username was able to authenticate to the Azure Service Management API - NOTE: The response indicates MFA (Microsoft) is in use."
             }
     
             # Conditional Access response (Based off of limited testing this seems to be the repsonse to DUO MFA)
         ElseIf($RespErr -match "AADSTS50158")
             {
-            Write-Host -ForegroundColor "green" "[*] SUCCESS! $username was able to authenticate to the Azure Service Management API - NOTE: The response indicates conditional access (MFA: DUO or other) is in use."
+            Write-Custom -Message  "[*] SUCCESS! $username was able to authenticate to the Azure Service Management API - NOTE: The response indicates conditional access (MFA: DUO or other) is in use."
             }
 
             # Locked out account or Smart Lockout in place
         ElseIf($RespErr -match "AADSTS50053")
             {
-            Write-Output "[*] WARNING! The account $username appears to be locked."
+            Custom-Output -message "[*] WARNING! The account $username appears to be locked."
             }
 
             # Disabled account
         ElseIf($RespErr -match "AADSTS50057")
             {
-            Write-Output "[*] WARNING! The account $username appears to be disabled."
+            Custom-Output -message "[*] WARNING! The account $username appears to be disabled."
             }
             
             # User password is expired
         ElseIf($RespErr -match "AADSTS50055")
             {
-            Write-Host -ForegroundColor "green" "[*] SUCCESS! $username was able to authenticate to the Azure Service Management API - NOTE: The user's password is expired."
+            Write-Custom -Message  "[*] SUCCESS! $username was able to authenticate to the Azure Service Management API - NOTE: The user's password is expired."
             }
 
             # Unknown errors
         Else
             {
-            Write-Output "[*] Got an error we haven't seen yet for user $username"
+            Custom-Output -message "[*] Got an error we haven't seen yet for user $username"
             $RespErr
             }
     }
@@ -1180,10 +1191,10 @@ Function Invoke-O365ActiveSyncAuth{
     $Password = ""
     )
 
-    Write-Host `r`n
-    Write-Host "---------------- Microsoft 365 ActiveSync ----------------"
+    Write-Custom -Message `r`n
+    Write-Custom -Message "---------------- Microsoft 365 ActiveSync ----------------"
 
-    Write-Host -ForegroundColor Yellow "[*] Authenticating to Microsoft 365 Active Sync..."
+    Write-Custom -Message  "[*] Authenticating to Microsoft 365 Active Sync..."
 
     $EASURL = ("https://" + "outlook.office365.com" + "/Microsoft-Server-ActiveSync")
     
@@ -1202,12 +1213,12 @@ Function Invoke-O365ActiveSyncAuth{
         }
         if ($StatusCode -eq 505)
 	    {
-	        Write-Host -ForegroundColor Green "[*] SUCCESS! $username successfully authenticated to O365 ActiveSync."
-            Write-Host -ForegroundColor DarkGreen "[***] NOTE: The Windows 10 Mail app can connect to ActiveSync." 	
+	        Write-Custom -Message  "[*] SUCCESS! $username successfully authenticated to O365 ActiveSync."
+            Write-Custom -Message  "[***] NOTE: The Windows 10 Mail app can connect to ActiveSync." 	
             $global:asyncresult = "YES"
 	    }
         else{
-            Write-Host -ForegroundColor Red "[*] Login to ActiveSync failed."
+            Write-Custom -Message  "[*] Login to ActiveSync failed."
         }
 
 
@@ -1227,34 +1238,34 @@ Function Invoke-ADFSAuth{
     
     )
     
-    Write-Host `r`n
-    Write-Host "---------------- ADFS Authentication ----------------"
+    Write-Custom -Message `r`n
+    Write-Custom -Message "---------------- ADFS Authentication ----------------"
 
     $ErrorActionPreference = 'silentlycontinue' 
 
-    Write-Host "[*] Getting ADFS URL..."
+    Write-Custom -Message "[*] Getting ADFS URL..."
 
         $ADFSCheck = Invoke-WebRequest -Uri "https://login.microsoftonline.com/getuserrealm.srf?login=$UserName&xml=1"
         [xml]$ADFSXML = $ADFSCheck.Content
         If($adfsxml.RealmInfo.NameSpaceType -like "Federated"){
             If($ADFSXML.RealmInfo.AuthUrl){
-            Write-Host -ForegroundColor Cyan ("[*] Found the ADFS authentication URL here: " + $adfsxml.RealmInfo.AuthURL)
+            Write-Custom -Message  ("[*] Found the ADFS authentication URL here: " + $adfsxml.RealmInfo.AuthURL)
             }
             Else{
-            Write-Host -ForegroundColor Red "[*] Something went wrong. Couldn't Find the ADFS authentication URL."
+            Write-Custom -Message  "[*] Something went wrong. Couldn't Find the ADFS authentication URL."
             }
         }
         ElseIf($adfsxml.RealmInfo.NameSpaceType -like "Managed"){
     
-        Write-Host -ForegroundColor Cyan "[*] ADFS does not appear to be in use. Authentication appears to be managed by Microsoft."
+        Write-Custom -Message  "[*] ADFS does not appear to be in use. Authentication appears to be managed by Microsoft."
         }
         ElseIf($adfsxml.RealmInfo.NameSpaceType -like "Unknown"){
     
-        Write-Host -ForegroundColor Red "[*] The domain associated with the email address you submitted does appear to have a presence in Microsoft Online / O365. Authentication will likely fail."
+        Write-Custom -Message  "[*] The domain associated with the email address you submitted does appear to have a presence in Microsoft Online / O365. Authentication will likely fail."
         }
   
 
-    Write-Host -ForegroundColor Yellow ("[*] Authenticating to On-Prem ADFS Portal at: " + $ADFSXML.RealmInfo.AuthUrl)
+    Write-Custom -Message  ("[*] Authenticating to On-Prem ADFS Portal at: " + $ADFSXML.RealmInfo.AuthUrl)
     $ADFSCheck = Invoke-WebRequest -Uri "https://login.microsoftonline.com/getuserrealm.srf?login=$UserName&xml=1"
     [xml]$ADFSXML = $ADFSCheck.Content
 
@@ -1275,14 +1286,14 @@ Function Invoke-ADFSAuth{
 
     if ($adfs.Cookies.GetCookies($FullADFSURL).Name -like "MSISAUTH")
     {
-        Write-Host -ForegroundColor Green "[*] SUCCESS! $username was able to authenticate to the ADFS Portal. Checking MFA now..."
+        Write-Custom -Message  "[*] SUCCESS! $username was able to authenticate to the ADFS Portal. Checking MFA now..."
 
-        Write-Host -ForegroundColor Yellow "[**] NOTE: This part may open a browser. If closed immediately it may prevent an SMS/call to the user."
+        Write-Custom -Message  "[**] NOTE: This part may open a browser. If closed immediately it may prevent an SMS/call to the user."
 
         $i = 5
 
         do {
-            Write-Host -ForegroundColor Yellow "[**] Sending Auth Request in $i...`r" -NoNewline
+            Write-Custom -Message  "[**] Sending Auth Request in $i...`r" -NoNewline
             Sleep 1
             $i--
         } while ($i -gt 0)
@@ -1290,27 +1301,61 @@ Function Invoke-ADFSAuth{
         $ADFSSRFAuth = Invoke-WebRequest -Uri "https://login.microsoftonline.com/login.srf" -WebSession $adfsmsonline -Method POST -Body $ADFSAuthAttempt.Forms[0].Fields -UserAgent ([Microsoft.PowerShell.Commands.PSUserAgent]::Chrome) -MaximumRedirection 0 
         
         if ($ADFSSRFAuth.Content -match "Stay signed in"){
-        Write-Host -ForegroundColor Cyan "[**] It appears there is no MFA for this account."
+        Write-Custom -Message  "[**] It appears there is no MFA for this account."
         $global:adfsresult = "YES" 
-        Write-Host -ForegroundColor DarkGreen "[***] NOTE: Login with a web browser to $FullADFSURL" 
+        Write-Custom -Message  "[***] NOTE: Login with a web browser to $FullADFSURL" 
         Foreach ($cookie in $adfs.Cookies.GetCookies($FullADFSURL)){write-verbose ($cookie.name + " = " + $cookie.value)}
         }
         elseif($ADFSSRFAuth.StatusCode -eq 302){
-        Write-Host -ForegroundColor Red "[**] Got redirected after login..."
+        Write-Custom -Message  "[**] Got redirected after login..."
             if($ADFSSRFAuth.Headers.Location -match "device.login.microsoftonline.com"){
-                Write-Host -ForegroundColor Red "[**] Redirection to device login occurred. This may indicate MFA is in place and is setup to SMS or Call the user."
+                Write-Custom -Message  "[**] Redirection to device login occurred. This may indicate MFA is in place and is setup to SMS or Call the user."
             }
         }
         elseif ($ADFSSRFAuth.Content -match "Verify your identity"){
-        Write-Host -ForegroundColor Red "[**] It appears MFA is setup for this account to access Microsoft 365 via ADFS." 
+        Write-Custom -Message  "[**] It appears MFA is setup for this account to access Microsoft 365 via ADFS." 
         Foreach ($cookie in $adfs.Cookies.GetCookies($FullADFSURL)){write-verbose ($cookie.name + " = " + $cookie.value)}
         }
     }
     else{
-    Write-Host -ForegroundColor red "[*] Login appears to have failed."
+    Write-Custom -Message  "[*] Login appears to have failed."
     }
 
+Function Custom-Write{
 
+    param(
+        [string]$message
+    )
+
+    if($resultsonly -eq $true) {
+
+        # We are ignoring console output except the results, and STFU
+    
+    }
+    else {
+
+        Write-Host "MFASweep: $($message)"
+
+    }
+}
+
+Function Custom-Output{
+
+    param(
+        [string]$message
+    )
+
+    if($resultsonly -eq $true) {
+
+        # We are ignoring console output except the results, and STFU
+    
+    }
+    else {
+
+        Write-Output $message
+
+    }
+}
     
 
 }
