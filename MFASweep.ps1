@@ -183,31 +183,31 @@ Function Invoke-MFASweep{
     $global:adfsresult = "NO"
 
 
-    Custom-Output -message "########################### Microsoft API Checks ###########################"
+    Output-Custom -message "########################### Microsoft API Checks ###########################"
     Invoke-GraphAPIAuth -Username $Username -Password $Password
     Invoke-AzureManagementAPIAuth -Username $Username -Password $Password
-    Custom-Output -message "############################################################################################################"
+    Output-Custom -message "############################################################################################################"
     Write-Custom -Message `r`n
-    Custom-Output -message "########################### Microsoft Web Portal User Agent Checks ###########################"
+    Output-Custom -message "########################### Microsoft Web Portal User Agent Checks ###########################"
     Invoke-O365WebPortalAuthWindows -Username $Username -Password $Password
     Invoke-O365WebPortalAuthLinux -Username $Username -Password $Password
     Invoke-O365WebPortalAuthMacOS -Username $Username -Password $Password
     Invoke-O365WebPortalAuthMobileAndroid -Username $Username -Password $Password
     Invoke-O365WebPortalAuthMobileiPhone -Username $Username -Password $Password
     Invoke-O365WebPortalAuthMobileWindowsPhone -Username $Username -Password $Password
-    Custom-Output -message "############################################################################################################"
+    Output-Custom -message "############################################################################################################"
     Write-Custom -Message `r`n
-    Custom-Output -message "########################### Legacy Auth Checks ###########################"
+    Output-Custom -message "########################### Legacy Auth Checks ###########################"
     Invoke-EWSAuth -Username $Username -Password $Password
     Invoke-O365ActiveSyncAuth -Username $Username -Password $Password
-    Custom-Output -message "############################################################################################################"
+    Output-Custom -message "############################################################################################################"
     Write-Custom -Message `r`n
     
 
     If($IncludeADFS){
-        Custom-Output -message "############################################################################################################"
+        Output-Custom -message "############################################################################################################"
         Write-Custom -Message `r`n
-        Custom-Output -message "########################### ADFS Check ###########################"
+        Output-Custom -message "########################### ADFS Check ###########################"
         Invoke-ADFSAuth -Username $Username -Password $Password
 
     }
@@ -1027,13 +1027,13 @@ Function Invoke-GraphAPIAuth{
             # Invalid Tenant Response
         ElseIf (($RespErr -match "AADSTS50128") -or ($RespErr -match "AADSTS50059"))
             {
-            Custom-Output -message "[*] WARNING! Tenant for account $username doesn't exist. Check the domain to make sure they are using Azure/O365 services."
+            Output-Custom -message "[*] WARNING! Tenant for account $username doesn't exist. Check the domain to make sure they are using Azure/O365 services."
             }
 
             # Invalid Username
         ElseIf($RespErr -match "AADSTS50034")
             {
-            Custom-Output -message "[*] WARNING! The user $username doesn't exist."
+            Output-Custom -message "[*] WARNING! The user $username doesn't exist."
             }
 
             # Microsoft MFA response
@@ -1051,13 +1051,13 @@ Function Invoke-GraphAPIAuth{
             # Locked out account or Smart Lockout in place
         ElseIf($RespErr -match "AADSTS50053")
             {
-            Custom-Output -message "[*] WARNING! The account $username appears to be locked."
+            Output-Custom -message "[*] WARNING! The account $username appears to be locked."
             }
 
             # Disabled account
         ElseIf($RespErr -match "AADSTS50057")
             {
-            Custom-Output -message "[*] WARNING! The account $username appears to be disabled."
+            Output-Custom -message "[*] WARNING! The account $username appears to be disabled."
             }
             
             # User password is expired
@@ -1069,7 +1069,7 @@ Function Invoke-GraphAPIAuth{
             # Unknown errors
         Else
             {
-            Custom-Output -message "[*] Got an error we haven't seen yet for user $username"
+            Output-Custom -message "[*] Got an error we haven't seen yet for user $username"
             $RespErr
             }
     }
@@ -1126,13 +1126,13 @@ Function Invoke-AzureManagementAPIAuth{
             # Invalid Tenant Response
         ElseIf (($RespErr -match "AADSTS50128") -or ($RespErr -match "AADSTS50059"))
             {
-            Custom-Output -message "[*] WARNING! Tenant for account $username doesn't exist. Check the domain to make sure they are using Azure/O365 services."
+            Output-Custom -message "[*] WARNING! Tenant for account $username doesn't exist. Check the domain to make sure they are using Azure/O365 services."
             }
 
             # Invalid Username
         ElseIf($RespErr -match "AADSTS50034")
             {
-            Custom-Output -message "[*] WARNING! The user $username doesn't exist."
+            Output-Custom -message "[*] WARNING! The user $username doesn't exist."
             }
 
             # Microsoft MFA response
@@ -1150,13 +1150,13 @@ Function Invoke-AzureManagementAPIAuth{
             # Locked out account or Smart Lockout in place
         ElseIf($RespErr -match "AADSTS50053")
             {
-            Custom-Output -message "[*] WARNING! The account $username appears to be locked."
+            Output-Custom -message "[*] WARNING! The account $username appears to be locked."
             }
 
             # Disabled account
         ElseIf($RespErr -match "AADSTS50057")
             {
-            Custom-Output -message "[*] WARNING! The account $username appears to be disabled."
+            Output-Custom -message "[*] WARNING! The account $username appears to be disabled."
             }
             
             # User password is expired
@@ -1168,7 +1168,7 @@ Function Invoke-AzureManagementAPIAuth{
             # Unknown errors
         Else
             {
-            Custom-Output -message "[*] Got an error we haven't seen yet for user $username"
+            Output-Custom -message "[*] Got an error we haven't seen yet for user $username"
             $RespErr
             }
     }
@@ -1321,7 +1321,7 @@ Function Invoke-ADFSAuth{
     Write-Custom -Message  "[*] Login appears to have failed."
     }
 
-Function Custom-Write{
+Function Write-Custom{
 
     param(
         [string]$message
@@ -1339,7 +1339,7 @@ Function Custom-Write{
     }
 }
 
-Function Custom-Output{
+Function Output-Custom{
 
     param(
         [string]$message
