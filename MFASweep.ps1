@@ -212,31 +212,31 @@ Function Invoke-MFASweep{
 
     }
 
-    Write-Custom -Message  "######### SINGLE FACTOR ACCESS RESULTS #########"
-    if($global:graphresult -contains "YES"){Write-Custom -Message -NoNewLine "Microsoft Graph API $Tab$Tab$Tab|"; Write-Custom -Message  " $global:graphresult"}
-    else{Write-Custom -Message "Microsoft Graph API $Tab$Tab$Tab| $global:graphresult"}
-    if($global:smresult -contains "YES"){Write-Custom -Message -NoNewLine "Microsoft Service Management API $Tab|"; Write-Custom -Message  " $global:smresult"}
-    else{Write-Custom -Message "Microsoft Service Management API $Tab| $global:smresult"}
-    if($global:o365wresult -contains "YES"){Write-Custom -Message -NoNewLine "O365 w/ Windows UA $Tab$Tab$Tab|"; Write-Custom -Message  " $global:o365wresult"}
-    else{Write-Custom -Message "O365 w/ Windows UA $Tab$Tab$Tab| $global:o365wresult"}
-    if($global:o365lresult -contains "YES"){Write-Custom -Message -NoNewLine "O365 w/ Linux UA $Tab$Tab$Tab|"; Write-Custom -Message  " $global:o365lresult"}
-    else{Write-Custom -Message "O365 w/ Linux UA $Tab$Tab$Tab| $global:o365lresult"}
-    if($global:o365mresult -contains "YES"){Write-Custom -Message -NoNewLine "O365 w/ MacOS UA $Tab$Tab$Tab|"; Write-Custom -Message  " $global:o365mresult"}
-    else{Write-Custom -Message "O365 w/ MacOS UA $Tab$Tab$Tab| $global:o365mresult"}
-    if($global:o365apresult -contains "YES"){Write-Custom -Message -NoNewLine "O365 w/ Android UA $Tab$Tab$Tab|"; Write-Custom -Message  " $global:o365apresult"}
-    else{Write-Custom -Message "O365 w/ Android UA $Tab$Tab$Tab| $global:o365apresult"}
-    if($global:o365ipresult -contains "YES"){Write-Custom -Message -NoNewLine "O365 w/ iPhone UA $Tab$Tab$Tab|"; Write-Custom -Message  " $global:o365ipresult"}
-    else{Write-Custom -Message "O365 w/ iPhone UA $Tab$Tab$Tab| $global:o365ipresult"}
-    if($global:o365wpresult -contains "YES"){Write-Custom -Message -NoNewLine "O365 w/ Windows Phone UA $Tab$Tab$Tab|"; Write-Custom -Message  " $global:o365wpresult"}
-    else{Write-Custom -Message "O365 w/ Windows Phone UA $Tab$Tab| $global:o365wpresult"}
-    if($global:ewsresult -contains "YES"){Write-Custom -Message -NoNewLine "Exchange Web Services $Tab$Tab$Tab|"; Write-Custom -Message  " $global:ewsresult"}
-    else{Write-Custom -Message "Exchange Web Services $Tab$Tab$Tab| $global:ewsresult"}
-    if($global:asyncresult -contains "YES"){Write-Custom -Message -NoNewLine "Active Sync $Tab$Tab$Tab|"; Write-Custom -Message  " $global:asyncresult"}
-    else{Write-Custom -Message "Active Sync $Tab$Tab$Tab$Tab| $global:asyncresult"}
+    Write-Host -Message  "######### SINGLE FACTOR ACCESS RESULTS #########"
+    if($global:graphresult -contains "YES"){Write-Host -Message -NoNewLine "Microsoft Graph API $Tab$Tab$Tab|"; Write-Host -Message  " $global:graphresult"}
+    else{Write-Host -Message "Microsoft Graph API $Tab$Tab$Tab| $global:graphresult"}
+    if($global:smresult -contains "YES"){Write-Host -Message -NoNewLine "Microsoft Service Management API $Tab|"; Write-Host -Message  " $global:smresult"}
+    else{Write-Host -Message "Microsoft Service Management API $Tab| $global:smresult"}
+    if($global:o365wresult -contains "YES"){Write-Host -Message -NoNewLine "O365 w/ Windows UA $Tab$Tab$Tab|"; Write-Host -Message  " $global:o365wresult"}
+    else{Write-Host -Message "O365 w/ Windows UA $Tab$Tab$Tab| $global:o365wresult"}
+    if($global:o365lresult -contains "YES"){Write-Host -Message -NoNewLine "O365 w/ Linux UA $Tab$Tab$Tab|"; Write-Host -Message  " $global:o365lresult"}
+    else{Write-Host -Message "O365 w/ Linux UA $Tab$Tab$Tab| $global:o365lresult"}
+    if($global:o365mresult -contains "YES"){Write-Host -Message -NoNewLine "O365 w/ MacOS UA $Tab$Tab$Tab|"; Write-Host -Message  " $global:o365mresult"}
+    else{Write-Host -Message "O365 w/ MacOS UA $Tab$Tab$Tab| $global:o365mresult"}
+    if($global:o365apresult -contains "YES"){Write-Host -Message -NoNewLine "O365 w/ Android UA $Tab$Tab$Tab|"; Write-Host -Message  " $global:o365apresult"}
+    else{Write-Host -Message "O365 w/ Android UA $Tab$Tab$Tab| $global:o365apresult"}
+    if($global:o365ipresult -contains "YES"){Write-Host -Message -NoNewLine "O365 w/ iPhone UA $Tab$Tab$Tab|"; Write-Host -Message  " $global:o365ipresult"}
+    else{Write-Host -Message "O365 w/ iPhone UA $Tab$Tab$Tab| $global:o365ipresult"}
+    if($global:o365wpresult -contains "YES"){Write-Host -Message -NoNewLine "O365 w/ Windows Phone UA $Tab$Tab$Tab|"; Write-Host -Message  " $global:o365wpresult"}
+    else{Write-Host -Message "O365 w/ Windows Phone UA $Tab$Tab| $global:o365wpresult"}
+    if($global:ewsresult -contains "YES"){Write-Host -Message -NoNewLine "Exchange Web Services $Tab$Tab$Tab|"; Write-Host -Message  " $global:ewsresult"}
+    else{Write-Host -Message "Exchange Web Services $Tab$Tab$Tab| $global:ewsresult"}
+    if($global:asyncresult -contains "YES"){Write-Host -Message -NoNewLine "Active Sync $Tab$Tab$Tab|"; Write-Host -Message  " $global:asyncresult"}
+    else{Write-Host -Message "Active Sync $Tab$Tab$Tab$Tab| $global:asyncresult"}
     
     If($IncludeADFS){
-    if($glotbal:adfsresult -contains "YES"){Write-Custom -Message -NoNewLine "ADFS $Tab$Tab$Tab|"; Write-Custom -Message  " $global:adfsresult"}
-    else{Write-Custom -Message "ADFS $Tab$Tab| $global:adfsresult"}
+    if($glotbal:adfsresult -contains "YES"){Write-Host -Message -NoNewLine "ADFS $Tab$Tab$Tab|"; Write-Host -Message  " $global:adfsresult"}
+    else{Write-Host -Message "ADFS $Tab$Tab| $global:adfsresult"}
     }
 }
 
@@ -1319,7 +1319,9 @@ Function Invoke-ADFSAuth{
     }
     else{
     Write-Custom -Message  "[*] Login appears to have failed."
-    }
+    } 
+
+}
 
 Function Write-Custom{
 
@@ -1355,7 +1357,4 @@ Function Output-Custom{
         Write-Output $message
 
     }
-}
-    
-
 }
