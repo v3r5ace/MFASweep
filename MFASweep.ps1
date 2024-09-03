@@ -1338,7 +1338,7 @@ Function Write-Custom{
     }
     else {
 
-        Write-Host "MFASweep: $($message)"
+        Write-Output "MFASweep: $($message)"
 
     }
 }
